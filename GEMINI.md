@@ -95,6 +95,7 @@ Each `.fasta` file contains sequences for a single class, and the filename (with
 -   **Technology Preference:** When not explicitly specified, prioritize the following:
     -   **Machine Learning:** `huggingface` and `pytorch`.
     -   **Data Analysis:** `polars` over `pandas`.
+    -   **Path manipulation:** `pathlib.Path`.
     -   **Testing:** `pytest`.
     -   **Package Management:** `uv`.
 

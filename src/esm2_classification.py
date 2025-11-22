@@ -1,6 +1,5 @@
-import os
+from pathlib import Path
 import yaml
-import glob
 import torch
 import logging
 import argparse
@@ -26,15 +25,15 @@ def load_data_from_folder(folder_path):
     sequences = []
     labels = []
     # Get all fasta files (support .fasta and .faa)
-    fasta_files = glob.glob(os.path.join(folder_path, "*.fasta")) + glob.glob(os.path.join(folder_path, "*.faa"))
+    folder = Path(folder_path)
+    fasta_files = list(folder.glob("*.fasta")) + list(folder.glob("*.faa"))
     
     if not fasta_files:
         logger.warning(f"No fasta/faa files found in {folder_path}")
 
     for file_path in fasta_files:
         # Extract label from filename (e.g., "Cas12.fasta" -> "Cas12", "Cas12.faa" -> "Cas12")
-        filename = os.path.basename(file_path)
-        label = os.path.splitext(filename)[0]
+        label = file_path.stem
         # Remove secondary extension if present (e.g., .faa.fai is usually skipped, but if .faa matches)
         # Actually glob logic ensures we process files ending in .faa or .fasta
         # But wait, ls output shows Cas1.faa and Cas1.faa.fai. .faa.fai is index. 
@@ -56,7 +55,7 @@ def load_data_from_folder(folder_path):
     return sequences, labels
 
 def create_dataset(folder_path, label_to_id=None):
-    if not os.path.exists(folder_path):
+    if not Path(folder_path).exists():
         logger.warning(f"Directory {folder_path} does not exist.")
         return None, None
         
@@ -109,7 +108,7 @@ def main():
 
     logger.info("Loading validation and test data...")
     # Handle 'validation' vs 'validate' folder naming
-    val_path = "data/validation" if os.path.exists("data/validation") else "data/validate"
+    val_path = "data/validation" if Path("data/validation").exists() else "data/validate"
     val_dataset, _ = create_dataset(val_path, label_to_id)
     test_dataset, _ = create_dataset("data/test", label_to_id)
 
@@ -243,7 +242,7 @@ def main():
         tokenizer.save_pretrained(output_dir)
         if accelerator.is_main_process:
             # Save label map
-            with open(os.path.join(output_dir, "label_map.yaml"), "w") as f:
+            with open(Path(output_dir) / "label_map.yaml", "w") as f:
                 yaml.dump(label_to_id, f)
             logger.info(f"Model saved to {output_dir}")
 
