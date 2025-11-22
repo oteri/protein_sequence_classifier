@@ -88,22 +88,25 @@ data/
 
 Each `.fasta` file contains sequences for a single class, and the filename (without extension) is used as the class label.
 
-## 7. Coding best practices:
-When coding (i.e. implement new features, fix bugs)
-- Ask question to the user to better focus your efforts.
-- When key technologies aren't specified, prefer the following:
-  - **Machine Learning:** huggingface and pytorch.
-  - **Data analysys:** polars over pandas
-  - **Testing:** pytest
-- Before start coding:
-    - Make a plan
-    - Gather documentation using context7 MCP and Google Search
-    - Do not repeat yourself: reuse extensively the already implemented code.
-    - You can update existing code if it allows to do not re-write code from scratch.
-    - Write a minimal test.
-    - Test the code and iteratively solve the bugs.
-- Test:
-    - use fixture for common resources
-    - each test case must be minimal and address only the needed features
-    - each test case with have minimal dependencies
-    - each test case must be designed to be as fast as possible. Use extensively mocking
+## 7. Coding Best Practices for Gemini Agent:
+
+**General Principles:**
+-   **Clarification:** Always ask clarifying questions to the user if the task is ambiguous or requires more detail before proceeding.
+-   **Technology Preference:** When not explicitly specified, prioritize the following:
+    -   **Machine Learning:** `huggingface` and `pytorch`.
+    -   **Data Analysis:** `polars` over `pandas`.
+    -   **Testing:** `pytest`.
+
+**Implementation Workflow:**
+1.  **Plan:** Before writing any code, formulate a clear, step-by-step plan.
+2.  **Information Gathering:** Utilize available tools (`read_file`, `list_directory`, `search_file_content`, `codebase_investigator`, `google_web_search`) to gather necessary documentation and understand the existing codebase.
+3.  **Code Reusability:** Prioritize reusing existing code. Avoid rewriting functionality from scratch if an existing implementation can be adapted or extended.
+4.  **Iterative Development:**
+    -   Write minimal, focused test cases for new features or bug fixes.
+    -   Implement the code.
+    -   Run tests and iteratively debug until all issues are resolved.
+
+**Testing Guidelines:**
+-   **Fixtures:** Use `pytest` fixtures for common test resources to ensure consistency and reduce setup duplication.
+-   **Minimalism:** Each test case should be minimal, focusing on a single feature or bug, and have minimal dependencies.
+-   **Performance:** Design test cases to be as fast as possible. Employ mocking extensively to isolate units under test and speed up execution.
