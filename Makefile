@@ -8,3 +8,6 @@ download_all_datasets:
 			wget -O data/$$dir/$$file https://raw.githubusercontent.com/LUCA-BioTech/AIL-scan/main/datasets/$$dir/$$file; \
 			done \
 		done
+
+train:
+	.venv/bin/accelerate launch --config_file configs/accelerate.yaml src/esm2_classification.py
