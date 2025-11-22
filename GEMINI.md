@@ -96,6 +96,7 @@ Each `.fasta` file contains sequences for a single class, and the filename (with
     -   **Machine Learning:** `huggingface` and `pytorch`.
     -   **Data Analysis:** `polars` over `pandas`.
     -   **Testing:** `pytest`.
+    -   **Package Management:** `uv`.
 
 **Implementation Workflow:**
 1.  **Plan:** Before writing any code, formulate a clear, step-by-step plan.
