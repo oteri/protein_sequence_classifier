@@ -205,3 +205,10 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Data
+# Ignore everything inside the 'data' directory
+data/**
+
+# Except for the .gitkeep files
+!data/**/.gitkeep
