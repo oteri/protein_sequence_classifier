@@ -1,8 +1,94 @@
-# Project Overview
+# Gemini Agent Project Guide: Protein Sequence Classifier
 
-This is a Python project for protein sequence classification. It uses ESM2 models fine-tuned with LoRA adapters. The project is designed to be modular and extensible for both human developers and coding agents.
+This document provides a concise guide for the Gemini coding agent to effectively understand and work on this project.
 
-# Coding best practices:
+## 1. Project Overview
+
+This project is a modular framework for protein sequence classification. It uses ESM2 models with LoRA adapters for fine-tuning. The goal is to classify protein sequences from FASTA files, where the filename determines the label.
+
+## 2. Key Files & Directories
+
+-   `src/esm2_classification.py`: This is the main script that will contain the core logic for data loading, model training, and evaluation.
+-   `configs/train.yaml`: This file will contain all hyperparameters for training, such as the ESM2 model to use, LoRA parameters, batch size, learning rate, etc.
+-   `configs/accelerate.yaml`: This file is for configuring the hardware and distributed training setup (e.g., GPUs, mixed precision).
+-   `data/`: This directory contains the training, validation, and test datasets, organized in subdirectories.
+-   `Makefile`: This file will contain helper commands for common tasks like training.
+
+## 3. Core Logic (`src/esm2_classification.py`)
+
+The `esm2_classification.py` script should implement the following logic:
+
+1.  **Load Configuration:** Read the `train.yaml` and `accelerate.yaml` files.
+2.  **Dataset Loading:**
+    *   Scan the `data/train`, `data/validation`, and `data/test` directories.
+    *   For each `.fasta` file, extract the label from the filename (e.g., `Cas12.fasta` -> `Cas12`).
+    *   Load the protein sequences from the FASTA files.
+3.  **Model Loading:**
+    *   Load the specified ESM2 model from Hugging Face.
+    *   Inject LoRA adapters into the model using the `peft` library.
+4.  **Tokenization:** Tokenize the protein sequences for the ESM2 model.
+5.  **Training:**
+    *   Use the `accelerate` library to handle the training loop.
+    *   Train the model on the training dataset.
+    *   Evaluate the model on the validation dataset.
+6.  **Evaluation:**
+    *   After training, evaluate the final model on the test dataset.
+    *   Save the trained model and evaluation results.
+
+## 4. Configuration
+
+### `configs/train.yaml`
+
+This file should define the following parameters:
+
+-   `model_name`: The Hugging Face model ID of the ESM2 model (e.g., `facebook/esm2_t6_8M_UR50D`).
+-   `lora_r`: The `r` parameter for LoRA.
+-   `lora_alpha`: The `alpha` parameter for LoRA.
+-   `lora_dropout`: The dropout rate for LoRA.
+-   `batch_size`: The training batch size.
+-   `max_length`: The maximum sequence length.
+-   `learning_rate`: The learning rate for the optimizer.
+-   `num_epochs`: The number of training epochs.
+-   `output_dir`: The directory to save the trained model and results.
+
+### `configs/accelerate.yaml`
+
+This file is configured by the user to match their hardware setup. It controls distributed training and mixed precision.
+
+## 5. Commands
+
+The primary command to run training is:
+
+```bash
+make train
+```
+
+This command should execute:
+
+```bash
+accelerate launch src/esm2_classification.py
+```
+
+## 6. Dataset Structure
+
+The data should be organized as follows:
+
+```
+data/
+├── train/
+│   ├── <LabelA>.fasta
+│   └── <LabelB>.fasta
+├── validation/
+│   ├── <LabelA>.fasta
+│   └── <LabelB>.fasta
+└── test/
+    ├── <LabelA>.fasta
+    └── <LabelB>.fasta
+```
+
+Each `.fasta` file contains sequences for a single class, and the filename (without extension) is used as the class label.
+
+## 7. Coding best practices:
 When coding (i.e. implement new features, fix bugs)
 - Ask question to the user to better focus your efforts.
 - When key technologies aren't specified, prefer the following:
@@ -11,35 +97,13 @@ When coding (i.e. implement new features, fix bugs)
   - **Testing:** pytest
 - Before start coding:
     - Make a plan
-    - Gather documentation using context7 MCP and Google Search 
-    - Do not repeat yourself: reuse extensively the already implemented code. 
+    - Gather documentation using context7 MCP and Google Search
+    - Do not repeat yourself: reuse extensively the already implemented code.
     - You can update existing code if it allows to do not re-write code from scratch.
     - Write a minimal test.
     - Test the code and iteratively solve the bugs.
-- Test: 
+- Test:
     - use fixture for common resources
-    - each test case must be minimal and address only the needed features 
+    - each test case must be minimal and address only the needed features
     - each test case with have minimal dependencies
     - each test case must be designed to be as fast as possible. Use extensively mocking
-
-## Building and Running
-
-The project is intended to be run using `make`. The following commands are planned:
-
-*   `make train`: This will launch the training process using `accelerate`.
-
-## Development Conventions
-
-The project follows a clear structure:
-
-*   `configs/`: Contains configuration files for training and hardware.
-    *   `train.yaml`: For model and training hyperparameters.
-    *   `accelerate.yaml`: For hardware and distribution configuration.
-*   `data/`: Contains the dataset, split into `train`, `validation`, and `test` sets.
-*   `src/`: Contains the main source code.
-    *   `esm2_classification.py`: The main script for training and classification.
-*   `Makefile`: Contains the commands for running the project.
-
-## Current State
-
-The initial directory structure and files (`configs`, `data`, `src` directories, and `configs/train.yaml`, `configs/accelerate.yaml`, `src/esm2_classification.py`, `Makefile` files) have been created as described in the `README.md` and previous `GEMINI.md` instructions.
