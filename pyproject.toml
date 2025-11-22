@@ -1,0 +1,24 @@
+[project]
+name = "protein-sequence-classifier"
+version = "0.1.0"
+description = "Protein sequence classifier using ESM2 and LoRA"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "accelerate",
+    "biopython",
+    "datasets",
+    "peft",
+    "pyyaml",
+    "scikit-learn",
+    "scipy",
+    "torch",
+    "transformers",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

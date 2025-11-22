@@ -87,7 +87,7 @@ A minimal environment includes:
 * `biopython` (FASTA parsing)
 * `pyyaml`
 
-A finalized `requirements.txt` will be generated once the environment is validated.
+Dependencies are managed via `pyproject.toml` using `uv`.
 
 ---
 
