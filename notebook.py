@@ -213,7 +213,7 @@ def _(
 ):
     # 6. Model
     print(f"Loading model {model_name}...")
-    model = AutoModelForSequenceClassification.from_pretrained(
+    _model = AutoModelForSequenceClassification.from_pretrained(
         model_name, 
         num_labels=num_labels,
         id2label=id_to_label,
@@ -230,16 +230,16 @@ def _(
         lora_dropout=config["lora_dropout"],
         target_modules=["query", "key", "value", "dense"] 
     )
-    model = get_peft_model(model, peft_config)
+    model_lora = get_peft_model(_model, peft_config)
     if accelerator.is_local_main_process:
-        model.print_trainable_parameters()
-    return (model,)
+        model_lora.print_trainable_parameters()
+    return (model_lora,)
 
 
 @app.cell
-def _(config, get_scheduler, model, torch, train_dataloader):
+def _(config, get_scheduler, model_lora, torch, train_dataloader):
     # 8. Optimizer & Scheduler
-    optimizer = torch.optim.AdamW(model.parameters(), lr=config["learning_rate"])
+    optimizer = torch.optim.AdamW(model_lora.parameters(), lr=config["learning_rate"])
 
     num_epochs = config["num_epochs"]
     num_training_steps = num_epochs * len(train_dataloader)
@@ -253,20 +253,31 @@ def _(config, get_scheduler, model, torch, train_dataloader):
 
 
 @app.cell
-def _(accelerator):
+def _(
+    accelerator,
+    lr_scheduler,
+    model_lora,
+    optimizer,
+    test_dataloader,
+    train_dataloader,
+    val_dataloader,
+):
     # 9. Prepare
-    model, optimizer, train_dataloader, val_dataloader, lr_scheduler = accelerator.prepare(
-        model, optimizer, train_dataloader, val_dataloader, lr_scheduler
+    # Use new variable names to avoid marimo global variable redefinition conflict
+    p_model, p_optimizer, p_train_dataloader, p_val_dataloader, p_lr_scheduler = accelerator.prepare(
+        model_lora, optimizer, train_dataloader, val_dataloader, lr_scheduler
     )
     if test_dataloader:
-        test_dataloader = accelerator.prepare(test_dataloader)
+        p_test_dataloader = accelerator.prepare(test_dataloader)
+    else:
+        p_test_dataloader = None
     return (
-        lr_scheduler,
-        model,
-        optimizer,
-        test_dataloader,
-        train_dataloader,
-        val_dataloader,
+        p_lr_scheduler,
+        p_model,
+        p_optimizer,
+        p_test_dataloader,
+        p_train_dataloader,
+        p_val_dataloader,
     )
 
 
@@ -274,89 +285,95 @@ def _(accelerator):
 def _(
     accelerator,
     accuracy_score,
-    lr_scheduler,
-    model,
     num_epochs,
-    optimizer,
+    p_lr_scheduler,
+    p_model,
+    p_optimizer,
+    p_train_dataloader,
+    p_val_dataloader,
     torch,
-    train_dataloader,
-    val_dataloader,
 ):
     # 10. Training Loop
-    print("Starting training...")
-    for epoch in range(num_epochs):
-        model.train()
-        total_loss = 0
-        for batch in train_dataloader:
-            outputs = model(**batch)
-            loss = outputs.loss
-            accelerator.backward(loss)
-            optimizer.step()
-            lr_scheduler.step()
-            optimizer.zero_grad()
-            total_loss += loss.item()
+    def run_training_loop():
+        print("Starting training...")
+        for epoch in range(num_epochs):
+            p_model.train()
+            total_loss = 0
+            for batch in p_train_dataloader:
+                outputs = p_model(**batch)
+                loss = outputs.loss
+                accelerator.backward(loss)
+                p_optimizer.step()
+                p_lr_scheduler.step()
+                p_optimizer.zero_grad()
+                total_loss += loss.item()
 
-        avg_train_loss = total_loss / len(train_dataloader)
-        print(f"Epoch {epoch+1}/{num_epochs} - Train Loss: {avg_train_loss:.4f}")
+            avg_train_loss = total_loss / len(p_train_dataloader)
+            print(f"Epoch {epoch+1}/{num_epochs} - Train Loss: {avg_train_loss:.4f}")
 
-        # Validation
-        if val_dataloader:
-            model.eval()
-            val_loss = 0
+            # Validation
+            if p_val_dataloader:
+                p_model.eval()
+                val_loss = 0
+                all_preds = []
+                all_labels = []
+                for batch in p_val_dataloader:
+                    with torch.no_grad():
+                        outputs = p_model(**batch)
+                        val_loss += outputs.loss.item()
+                        predictions = outputs.logits.argmax(dim=-1)
+                        preds, labels = accelerator.gather_for_metrics((predictions, batch["label"]))
+                        all_preds.extend(preds.cpu().numpy())
+                        all_labels.extend(labels.cpu().numpy())
+
+                avg_val_loss = val_loss / len(p_val_dataloader)
+                accuracy = accuracy_score(all_labels, all_preds)
+                print(f"Epoch {epoch+1}/{num_epochs} - Val Loss: {avg_val_loss:.4f} - Val Accuracy: {accuracy:.4f}")
+
+    run_training_loop()
+    return
+
+
+@app.cell
+def _(
+    accelerator,
+    accuracy_score,
+    p_model,
+    p_test_dataloader,
+    precision_recall_fscore_support,
+    torch,
+):
+    # 11. Final Evaluation on Test Set
+    def run_test_loop():
+        if p_test_dataloader:
+            print("Evaluating on test set...")
+            p_model.eval()
             all_preds = []
             all_labels = []
-            for batch in val_dataloader:
+            for batch in p_test_dataloader:
                 with torch.no_grad():
-                    outputs = model(**batch)
-                    val_loss += outputs.loss.item()
+                    outputs = p_model(**batch)
                     predictions = outputs.logits.argmax(dim=-1)
                     preds, labels = accelerator.gather_for_metrics((predictions, batch["label"]))
                     all_preds.extend(preds.cpu().numpy())
                     all_labels.extend(labels.cpu().numpy())
 
-            avg_val_loss = val_loss / len(val_dataloader)
             accuracy = accuracy_score(all_labels, all_preds)
-            print(f"Epoch {epoch+1}/{num_epochs} - Val Loss: {avg_val_loss:.4f} - Val Accuracy: {accuracy:.4f}")
+            precision, recall, f1, _ = precision_recall_fscore_support(all_labels, all_preds, average='weighted', zero_division=0)
+
+            print(f"Test Results: Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1: {f1:.4f}")
+
+    run_test_loop()
     return
 
 
 @app.cell
-def _(
-    accelerator,
-    accuracy_score,
-    model,
-    precision_recall_fscore_support,
-    test_dataloader,
-    torch,
-):
-    # 11. Final Evaluation on Test Set
-    if test_dataloader:
-        print("Evaluating on test set...")
-        model.eval()
-        all_preds = []
-        all_labels = []
-        for batch in test_dataloader:
-            with torch.no_grad():
-                outputs = model(**batch)
-                predictions = outputs.logits.argmax(dim=-1)
-                preds, labels = accelerator.gather_for_metrics((predictions, batch["label"]))
-                all_preds.extend(preds.cpu().numpy())
-                all_labels.extend(labels.cpu().numpy())
-
-        accuracy = accuracy_score(all_labels, all_preds)
-        precision, recall, f1, _ = precision_recall_fscore_support(all_labels, all_preds, average='weighted', zero_division=0)
-
-        print(f"Test Results: Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1: {f1:.4f}")
-    return
-
-
-@app.cell
-def _(Path, accelerator, config, label_to_id, model, tokenizer, yaml):
+def _(Path, accelerator, config, label_to_id, p_model, tokenizer, yaml):
     # 12. Save Model
     output_dir = config["output_dir"]
     if output_dir:
         accelerator.wait_for_everyone()
-        unwrapped_model = accelerator.unwrap_model(model)
+        unwrapped_model = accelerator.unwrap_model(p_model)
         unwrapped_model.save_pretrained(output_dir, is_main_process=accelerator.is_main_process)
         tokenizer.save_pretrained(output_dir)
         if accelerator.is_main_process:
