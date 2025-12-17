@@ -8,6 +8,7 @@ dependencies = [
     "accelerate",
     "biopython",
     "datasets",
+    "marimo[mcp]>=0.18.4",
     "peft",
     "pyyaml",
     "scikit-learn",
