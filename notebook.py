@@ -103,7 +103,8 @@ def _(Path, SeqIO, logger, yaml):
                 logger.warning(f"Label {label} not in label map. Skipping sequence.")
 
         from datasets import Dataset # Import here to ensure visibility if needed or rely on outer scope
-        dataset = Dataset.from_dict({"sequence": filtered_sequences, "label": labels_id})
+        # Changed "label" to "labels" for HF model compatibility
+        dataset = Dataset.from_dict({"sequence": filtered_sequences, "labels": labels_id})
         return dataset, label_to_id
     return create_dataset, load_config
 
@@ -299,9 +300,18 @@ def _(
         for epoch in range(num_epochs):
             p_model.train()
             total_loss = 0
-            for batch in p_train_dataloader:
+            for i, batch in enumerate(p_train_dataloader):
+                if i == 0:
+                    # Debug print
+                    if 'labels' not in batch:
+                         print(f"WARNING: 'labels' key missing in batch! Keys: {list(batch.keys())}")
+
                 outputs = p_model(**batch)
+
                 loss = outputs.loss
+                if loss is None:
+                     raise ValueError(f"Model return None loss. Batch keys: {list(batch.keys())}")
+
                 accelerator.backward(loss)
                 p_optimizer.step()
                 p_lr_scheduler.step()
@@ -322,7 +332,8 @@ def _(
                         outputs = p_model(**batch)
                         val_loss += outputs.loss.item()
                         predictions = outputs.logits.argmax(dim=-1)
-                        preds, labels = accelerator.gather_for_metrics((predictions, batch["label"]))
+                        # Changed "label" to "labels"
+                        preds, labels = accelerator.gather_for_metrics((predictions, batch["labels"]))
                         all_preds.extend(preds.cpu().numpy())
                         all_labels.extend(labels.cpu().numpy())
 
@@ -354,7 +365,8 @@ def _(
                 with torch.no_grad():
                     outputs = p_model(**batch)
                     predictions = outputs.logits.argmax(dim=-1)
-                    preds, labels = accelerator.gather_for_metrics((predictions, batch["label"]))
+                    # Changed "label" to "labels"
+                    preds, labels = accelerator.gather_for_metrics((predictions, batch["labels"]))
                     all_preds.extend(preds.cpu().numpy())
                     all_labels.extend(labels.cpu().numpy())
 
