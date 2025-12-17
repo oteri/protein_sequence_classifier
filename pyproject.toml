@@ -9,6 +9,7 @@ dependencies = [
     "biopython",
     "datasets",
     "marimo[mcp]>=0.18.4",
+    "nbformat>=5.10.4",
     "peft",
     "pyyaml",
     "scikit-learn",
