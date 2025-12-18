@@ -3,7 +3,7 @@ name = "protein-sequence-classifier"
 version = "0.1.0"
 description = "Protein sequence classifier using ESM2 and LoRA"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 dependencies = [
     "accelerate",
     "biopython",
