@@ -97,7 +97,7 @@ Each `.fasta` file contains sequences for a single class, and the filename (with
     -   **Data Analysis:** `polars` over `pandas`.
     -   **Path manipulation:** `pathlib.Path`.
     -   **Testing:** `pytest`.
-    -   **Package Management:** `uv`.
+    -   **Package Management:** Use `uv`  to add/delete/update packages .
 
 **Implementation Workflow:**
 1.  **Plan:** Before writing any code, formulate a clear, step-by-step plan.
