@@ -13,7 +13,11 @@ from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 import numpy as np
 
 # Setup logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+    force=True,
+)
 logger = logging.getLogger(__name__)
 
 def load_config(config_path="configs/train.yaml"):
