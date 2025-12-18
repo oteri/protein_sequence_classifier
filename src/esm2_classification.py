@@ -79,6 +79,57 @@ def create_dataset(folder_path, label_to_id=None):
     dataset = Dataset.from_dict({"sequence": filtered_sequences, "labels": labels_id})
     return dataset, label_to_id
 
+def evaluate(model, dataloader, accelerator):
+    model.eval()
+    total_loss = 0
+    all_preds = []
+    all_labels = []
+    for batch in dataloader:
+        with torch.no_grad():
+            outputs = model(**batch)
+            if outputs.loss is not None:
+                total_loss += outputs.loss.item()
+            predictions = outputs.logits.argmax(dim=-1)
+            preds, labels = accelerator.gather_for_metrics((predictions, batch["labels"]))
+            all_preds.extend(preds.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
+    
+    avg_loss = total_loss / len(dataloader) if len(dataloader) > 0 else 0
+    accuracy = accuracy_score(all_labels, all_preds)
+    precision, recall, f1, _ = precision_recall_fscore_support(all_labels, all_preds, average='weighted', zero_division=0)
+    return avg_loss, accuracy, precision, recall, f1
+
+def train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler, accelerator, num_epochs):
+    logger.info("Starting training...")
+    for epoch in range(num_epochs):
+        model.train()
+        total_loss = 0
+        for i, batch in enumerate(train_dataloader):
+            if i == 0:
+                 # Debug print
+                if 'labels' not in batch:
+                     logger.warning(f"WARNING: 'labels' key missing in batch! Keys: {list(batch.keys())}")
+
+            outputs = model(**batch)
+
+            loss = outputs.loss
+            if loss is None:
+                 raise ValueError(f"Model return None loss. Batch keys: {list(batch.keys())}")
+
+            accelerator.backward(loss)
+            optimizer.step()
+            lr_scheduler.step()
+            optimizer.zero_grad()
+            total_loss += loss.item()
+
+        avg_train_loss = total_loss / len(train_dataloader)
+        logger.info(f"Epoch {epoch+1}/{num_epochs} - Train Loss: {avg_train_loss:.4f}")
+
+        # Validation
+        if val_dataloader:
+            val_loss, val_acc, _, _, _ = evaluate(model, val_dataloader, accelerator)
+            logger.info(f"Epoch {epoch+1}/{num_epochs} - Val Loss: {val_loss:.4f} - Val Accuracy: {val_acc:.4f}")
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_file", type=str, default="configs/train.yaml")
@@ -184,63 +235,12 @@ def main():
         test_dataloader = accelerator.prepare(test_dataloader)
 
     # 10. Training Loop
-    logger.info("Starting training...")
-    for epoch in range(num_epochs):
-        model.train()
-        total_loss = 0
-        for batch in train_dataloader:
-            outputs = model(**batch)
-            loss = outputs.loss
-            if loss is None:
-                 raise ValueError(f"Model return None loss. Batch keys: {list(batch.keys())}")
-
-            accelerator.backward(loss)
-            optimizer.step()
-            lr_scheduler.step()
-            optimizer.zero_grad()
-            total_loss += loss.item()
-
-        avg_train_loss = total_loss / len(train_dataloader)
-        logger.info(f"Epoch {epoch+1}/{num_epochs} - Train Loss: {avg_train_loss:.4f}")
-
-        # Validation
-        if val_dataloader:
-            model.eval()
-            val_loss = 0
-            all_preds = []
-            all_labels = []
-            for batch in val_dataloader:
-                with torch.no_grad():
-                    outputs = model(**batch)
-                    val_loss += outputs.loss.item()
-                    predictions = outputs.logits.argmax(dim=-1)
-
-                    preds, labels = accelerator.gather_for_metrics((predictions, batch["labels"]))
-                    all_preds.extend(preds.cpu().numpy())
-                    all_labels.extend(labels.cpu().numpy())
-
-            avg_val_loss = val_loss / len(val_dataloader)
-            accuracy = accuracy_score(all_labels, all_preds)
-            logger.info(f"Epoch {epoch+1}/{num_epochs} - Val Loss: {avg_val_loss:.4f} - Val Accuracy: {accuracy:.4f}")
+    train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler, accelerator, num_epochs)
 
     # 11. Final Evaluation on Test Set
     if test_dataloader:
         logger.info("Evaluating on test set...")
-        model.eval()
-        all_preds = []
-        all_labels = []
-        for batch in test_dataloader:
-            with torch.no_grad():
-                outputs = model(**batch)
-                predictions = outputs.logits.argmax(dim=-1)
-                
-                preds, labels = accelerator.gather_for_metrics((predictions, batch["labels"]))
-                all_preds.extend(preds.cpu().numpy())
-                all_labels.extend(labels.cpu().numpy())
-
-        accuracy = accuracy_score(all_labels, all_preds)
-        precision, recall, f1, _ = precision_recall_fscore_support(all_labels, all_preds, average='weighted', zero_division=0)
-
+        _, accuracy, precision, recall, f1 = evaluate(model, test_dataloader, accelerator)
         logger.info(f"Test Results: Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1: {f1:.4f}")
 
     # 12. Save Model
