@@ -79,8 +79,8 @@ def create_dataset(folder_path, label_to_id=None):
             filtered_sequences.append(seq)
         else:
             logger.warning(f"Label {label} not in label map. Skipping sequence.")
-    
-    dataset = Dataset.from_dict({"sequence": filtered_sequences, "label": labels_id})
+
+    dataset = Dataset.from_dict({"sequence": filtered_sequences, "labels": labels_id})
     return dataset, label_to_id
 
 def main():
@@ -191,7 +191,7 @@ def main():
             lr_scheduler.step()
             optimizer.zero_grad()
             total_loss += loss.item()
-        
+
         avg_train_loss = total_loss / len(train_dataloader)
         logger.info(f"Epoch {epoch+1}/{num_epochs} - Train Loss: {avg_train_loss:.4f}")
 
@@ -206,10 +206,11 @@ def main():
                     outputs = model(**batch)
                     val_loss += outputs.loss.item()
                     predictions = outputs.logits.argmax(dim=-1)
-                    preds, labels = accelerator.gather_for_metrics((predictions, batch["label"]))
+
+                    preds, labels = accelerator.gather_for_metrics((predictions, batch["labels"]))
                     all_preds.extend(preds.cpu().numpy())
                     all_labels.extend(labels.cpu().numpy())
-            
+
             avg_val_loss = val_loss / len(val_dataloader)
             accuracy = accuracy_score(all_labels, all_preds)
             logger.info(f"Epoch {epoch+1}/{num_epochs} - Val Loss: {avg_val_loss:.4f} - Val Accuracy: {accuracy:.4f}")
@@ -224,13 +225,14 @@ def main():
             with torch.no_grad():
                 outputs = model(**batch)
                 predictions = outputs.logits.argmax(dim=-1)
-                preds, labels = accelerator.gather_for_metrics((predictions, batch["label"]))
+                
+                preds, labels = accelerator.gather_for_metrics((predictions, batch["labels"]))
                 all_preds.extend(preds.cpu().numpy())
                 all_labels.extend(labels.cpu().numpy())
-        
+
         accuracy = accuracy_score(all_labels, all_preds)
         precision, recall, f1, _ = precision_recall_fscore_support(all_labels, all_preds, average='weighted', zero_division=0)
-        
+
         logger.info(f"Test Results: Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1: {f1:.4f}")
 
     # 12. Save Model
