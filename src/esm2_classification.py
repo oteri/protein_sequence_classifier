@@ -144,7 +144,7 @@ def main():
     # 6. Model
     logger.info(f"Loading model {model_name}...")
     model = AutoModelForSequenceClassification.from_pretrained(
-        model_name, 
+        model_name,
         num_labels=num_labels,
         id2label=id_to_label,
         label2id=label_to_id
@@ -153,12 +153,12 @@ def main():
     # 7. LoRA
     logger.info("Applying LoRA...")
     peft_config = LoraConfig(
-        task_type=TaskType.SEQ_CLS, 
-        inference_mode=False, 
-        r=config["lora_r"], 
-        lora_alpha=config["lora_alpha"], 
+        task_type=TaskType.SEQ_CLS,
+        inference_mode=False,
+        r=config["lora_r"],
+        lora_alpha=config["lora_alpha"],
         lora_dropout=config["lora_dropout"],
-        target_modules=["query", "key", "value", "dense"] 
+        target_modules=["query", "key", "value", "dense"]
     )
     model = get_peft_model(model, peft_config)
     if accelerator.is_local_main_process:
@@ -166,7 +166,7 @@ def main():
 
     # 8. Optimizer & Scheduler
     optimizer = torch.optim.AdamW(model.parameters(), lr=config["learning_rate"])
-    
+
     num_epochs = config["num_epochs"]
     num_training_steps = num_epochs * len(train_dataloader)
     lr_scheduler = get_scheduler(
