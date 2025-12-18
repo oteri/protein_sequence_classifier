@@ -260,7 +260,8 @@ def main():
     # 10. Initialize wandb
     if config.get("use_wandb", False) and accelerator.is_main_process:
         wandb.init(
-            project=config.get("wandb_project", "protein-sequence-classifier"),
+            entity=config.get("wandb_entity",  None),
+            project=config.get("wandb_project",  None),
             name=config.get("wandb_run_name", None),
             config=config
         )
