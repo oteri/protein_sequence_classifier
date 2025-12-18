@@ -191,6 +191,9 @@ def main():
         for batch in train_dataloader:
             outputs = model(**batch)
             loss = outputs.loss
+            if loss is None:
+                 raise ValueError(f"Model return None loss. Batch keys: {list(batch.keys())}")
+
             accelerator.backward(loss)
             optimizer.step()
             lr_scheduler.step()
