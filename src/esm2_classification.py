@@ -155,7 +155,7 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config_file", type=str, default="configs/train.yaml")
+    parser.add_argument("--config_file", type=str, help="Path to the config file.")
     args = parser.parse_args()
 
     # 1. Initialize Accelerator
