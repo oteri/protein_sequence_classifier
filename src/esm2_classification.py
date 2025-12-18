@@ -131,9 +131,9 @@ def main():
         val_dataset_tokenized = val_dataset.map(tokenize_batch, batched=True, remove_columns=["sequence"])
         test_dataset_tokenized = test_dataset.map(tokenize_batch, batched=True, remove_columns=["sequence"])
 
-    train_dataset.set_format("torch")
-    if val_dataset: val_dataset.set_format("torch")
-    if test_dataset: test_dataset.set_format("torch")
+    train_dataset_tokenized.set_format("torch")
+    val_dataset_tokenized.set_format("torch")
+    test_dataset_tokenized.set_format("torch")
 
     # 5. DataLoaders
     batch_size = config["batch_size"]
