@@ -210,3 +210,6 @@ __marimo__/
 # Ignore everything inside the 'data' directory
 data/**
 .gemini/
+
+# Wandb
+wandb/**
