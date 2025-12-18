@@ -31,19 +31,14 @@ def load_data_from_folder(folder_path):
     # Get all fasta files (support .fasta and .faa)
     folder = Path(folder_path)
     fasta_files = list(folder.glob("*.fasta")) + list(folder.glob("*.faa"))
-    
+
     if not fasta_files:
-        logger.warning(f"No fasta/faa files found in {folder_path}")
+        raise ValueError(f"No fasta/faa files found in {folder_path}")
 
     for file_path in fasta_files:
-        # Extract label from filename (e.g., "Cas12.fasta" -> "Cas12", "Cas12.faa" -> "Cas12")
+        # Extract label from filename (e.g., "Cas12.fasta" -> "Cas12")
         label = file_path.stem
-        # Remove secondary extension if present (e.g., .faa.fai is usually skipped, but if .faa matches)
-        # Actually glob logic ensures we process files ending in .faa or .fasta
-        # But wait, ls output shows Cas1.faa and Cas1.faa.fai. .faa.fai is index. 
-        # SeqIO.parse might fail on .fai or treated as empty.
-        # We should skip .fai files explicitly if glob picks them up (it shouldn't if we only ask for .faa/.fasta, unless .fai ends with .fasta which it doesn't).
-        
+
         # Read sequences
         try:
             records = list(SeqIO.parse(file_path, "fasta"))
@@ -55,26 +50,23 @@ def load_data_from_folder(folder_path):
                 labels.append(label)
         except Exception as e:
             logger.error(f"Error reading {file_path}: {e}")
-            
+
     return sequences, labels
 
 def create_dataset(folder_path, label_to_id=None):
     if not Path(folder_path).exists():
-        logger.warning(f"Directory {folder_path} does not exist.")
-        return None, None
-        
+        raise ValueError(f"Directory {folder_path} does not exist.")
+
     sequences, labels_text = load_data_from_folder(folder_path)
-    
+
     if not sequences:
-        logger.warning(f"No sequences collected from {folder_path}")
-        return None, None
+        raise ValueError(f"No sequences collected from {folder_path}")
 
     if label_to_id is None:
         unique_labels = sorted(list(set(labels_text)))
         label_to_id = {label: i for i, label in enumerate(unique_labels)}
-    
-    # Filter labels that might not be in label_to_id (if validation has new labels?)
-    # Usually we assume training data has all labels.
+
+    # Filter labels
     labels_id = []
     filtered_sequences = []
     for seq, label in zip(sequences, labels_text):
