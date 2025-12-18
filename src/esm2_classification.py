@@ -3,6 +3,7 @@ import yaml
 import torch
 import logging
 import argparse
+import wandb
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, get_scheduler
 from peft import get_peft_model, LoraConfig, TaskType
@@ -99,8 +100,10 @@ def evaluate(model, dataloader, accelerator):
     precision, recall, f1, _ = precision_recall_fscore_support(all_labels, all_preds, average='weighted', zero_division=0)
     return avg_loss, accuracy, precision, recall, f1
 
-def train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler, accelerator, num_epochs):
+def train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler, accelerator, num_epochs, config=None):
     logger.info("Starting training...")
+    use_wandb = config.get("use_wandb", False) if config else False
+
     for epoch in range(num_epochs):
         model.train()
         total_loss = 0
@@ -122,13 +125,33 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler
             optimizer.zero_grad()
             total_loss += loss.item()
 
+            if use_wandb and accelerator.is_main_process:
+                wandb.log({
+                    "train/batch_loss": loss.item(),
+                    "train/lr": lr_scheduler.get_last_lr()[0],
+                    "train/step": epoch * len(train_dataloader) + i
+                })
+
         avg_train_loss = total_loss / len(train_dataloader)
         logger.info(f"Epoch {epoch+1}/{num_epochs} - Train Loss: {avg_train_loss:.4f}")
 
+        if use_wandb and accelerator.is_main_process:
+            wandb.log({"train/epoch_loss": avg_train_loss, "epoch": epoch + 1})
+
         # Validation
         if val_dataloader:
-            val_loss, val_acc, _, _, _ = evaluate(model, val_dataloader, accelerator)
+            val_loss, val_acc, val_precision, val_recall, val_f1 = evaluate(model, val_dataloader, accelerator)
             logger.info(f"Epoch {epoch+1}/{num_epochs} - Val Loss: {val_loss:.4f} - Val Accuracy: {val_acc:.4f}")
+            
+            if use_wandb and accelerator.is_main_process:
+                wandb.log({
+                    "val/loss": val_loss,
+                    "val/accuracy": val_acc,
+                    "val/precision": val_precision,
+                    "val/recall": val_recall,
+                    "val/f1": val_f1,
+                    "epoch": epoch + 1
+                })
 
 def main():
     parser = argparse.ArgumentParser()
@@ -234,16 +257,32 @@ def main():
     if test_dataloader:
         test_dataloader = accelerator.prepare(test_dataloader)
 
-    # 10. Training Loop
-    train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler, accelerator, num_epochs)
+    # 10. Initialize wandb
+    if config.get("use_wandb", False) and accelerator.is_main_process:
+        wandb.init(
+            project=config.get("wandb_project", "protein-sequence-classifier"),
+            name=config.get("wandb_run_name", None),
+            config=config
+        )
 
-    # 11. Final Evaluation on Test Set
+    # 11. Training Loop
+    train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler, accelerator, num_epochs, config=config)
+
+    # 12. Final Evaluation on Test Set
     if test_dataloader:
         logger.info("Evaluating on test set...")
         _, accuracy, precision, recall, f1 = evaluate(model, test_dataloader, accelerator)
         logger.info(f"Test Results: Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1: {f1:.4f}")
+        
+        if config.get("use_wandb", False) and accelerator.is_main_process:
+            wandb.log({
+                "test/accuracy": accuracy,
+                "test/precision": precision,
+                "test/recall": recall,
+                "test/f1": f1
+            })
 
-    # 12. Save Model
+    # 13. Save Model
     output_dir = config["output_dir"]
     if output_dir:
         accelerator.wait_for_everyone()
@@ -255,6 +294,9 @@ def main():
             with open(Path(output_dir) / "label_map.yaml", "w") as f:
                 yaml.dump(label_to_id, f)
             logger.info(f"Model saved to {output_dir}")
+            
+            if config.get("use_wandb", False):
+                wandb.finish()
 
 if __name__ == "__main__":
     main()
