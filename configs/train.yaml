@@ -2,8 +2,8 @@ model_name: "facebook/esm2_t6_8M_UR50D"
 lora_r: 8
 lora_alpha: 16
 lora_dropout: 0.1
-batch_size: 8
-max_length: 512
+batch_size: 2
+max_length: 128
 learning_rate: 0.0005
 num_epochs: 3
 output_dir: "./output"
