@@ -91,36 +91,45 @@ def main():
     # 2. Load Config
     config = load_config(args.config_file)
     logger.info(f"Loaded config: {config}")
-    
-    # 3. Load Data & Create Label Map from Training Data
+
+    # 3. Load Data & Create Label Map
     logger.info("Loading training data...")
-    train_dataset, label_to_id = create_dataset("data/train")
-    if train_dataset is None:
-        raise ValueError("Training data is empty! Please populate data/train.")
-    
+    train_path = "data/train"
+    val_path = "data/validation" if Path("data/validation").exists() else "data/validate"
+    test_path = "data/test"
+
+    try:
+        train_dataset, label_to_id = create_dataset(train_path)
+    except ValueError:
+        raise ValueError(f"Training data is empty! Please populate {train_path}.")
+
     id_to_label = {v: k for k, v in label_to_id.items()}
     num_labels = len(label_to_id)
     logger.info(f"Found {num_labels} classes: {label_to_id}")
 
-    logger.info("Loading validation and test data...")
-    # Handle 'validation' vs 'validate' folder naming
-    val_path = "data/validation" if Path("data/validation").exists() else "data/validate"
-    val_dataset, _ = create_dataset(val_path, label_to_id)
-    test_dataset, _ = create_dataset("data/test", label_to_id)
+    logger.info(f"Loading validation and test data from {val_path} and {test_path}")
+
+    try:
+        val_dataset, _ = create_dataset(val_path, label_to_id)
+    except ValueError:
+        raise ValueError(f"Validation data is empty! Please populate {val_path}.")
+
+    try:
+        test_dataset, _ = create_dataset(test_path, label_to_id)
+    except ValueError:
+         raise ValueError(f"Test data is empty! Please populate {test_path}.")
 
     # 4. Tokenization
     model_name = config["model_name"]
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    
+
     def tokenize_batch(batch):
         return tokenizer(batch["sequence"], padding="max_length", truncation=True, max_length=config["max_length"])
 
     with accelerator.main_process_first():
-        train_dataset = train_dataset.map(tokenize_batch, batched=True, remove_columns=["sequence"])
-        if val_dataset:
-            val_dataset = val_dataset.map(tokenize_batch, batched=True, remove_columns=["sequence"])
-        if test_dataset:
-            test_dataset = test_dataset.map(tokenize_batch, batched=True, remove_columns=["sequence"])
+        train_dataset_tokenized = train_dataset.map(tokenize_batch, batched=True, remove_columns=["sequence"])
+        val_dataset_tokenized = val_dataset.map(tokenize_batch, batched=True, remove_columns=["sequence"])
+        test_dataset_tokenized = test_dataset.map(tokenize_batch, batched=True, remove_columns=["sequence"])
 
     train_dataset.set_format("torch")
     if val_dataset: val_dataset.set_format("torch")
@@ -128,9 +137,9 @@ def main():
 
     # 5. DataLoaders
     batch_size = config["batch_size"]
-    train_dataloader = DataLoader(train_dataset, shuffle=True, batch_size=batch_size)
-    val_dataloader = DataLoader(val_dataset, batch_size=batch_size) if val_dataset else None
-    test_dataloader = DataLoader(test_dataset, batch_size=batch_size) if test_dataset else None
+    train_dataloader = DataLoader(train_dataset_tokenized, shuffle=True, batch_size=batch_size)
+    val_dataloader = DataLoader(val_dataset_tokenized, batch_size=batch_size)
+    test_dataloader = DataLoader(test_dataset_tokenized, batch_size=batch_size)
 
     # 6. Model
     logger.info(f"Loading model {model_name}...")
