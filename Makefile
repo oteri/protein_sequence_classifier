@@ -10,4 +10,4 @@ download_all_datasets:
 		done
 
 train:
-	.venv/bin/accelerate launch --config_file configs/accelerate.yaml src/esm2_classification.py --config_file configs/train.yaml
+	uv run .venv/bin/accelerate launch --config_file configs/accelerate.yaml src/esm2_classification.py --config_file configs/train.yaml
