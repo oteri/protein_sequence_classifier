@@ -403,7 +403,7 @@ def main():
         )
 
     # 11. Training Loop
-    train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler, accelerator, num_epochs, config=config)
+    train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler, accelerator, config=config)
 
     # 12. Final Evaluation on Test Set
     if test_dataloader:
