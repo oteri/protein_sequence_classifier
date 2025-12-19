@@ -1,5 +1,6 @@
 from pathlib import Path
 import yaml
+import time
 import torch
 import logging
 import argparse
@@ -108,6 +109,7 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler
         model.train()
         total_loss = 0
         for i, batch in enumerate(train_dataloader):
+            batch_start_time = time.time()
             outputs = model(**batch)
 
             loss = outputs.loss
@@ -120,11 +122,15 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler
             optimizer.zero_grad()
             total_loss += loss.item()
 
+            batch_duration = time.time() - batch_start_time
+            logger.info(f"Epoch {epoch+1}/{num_epochs} - Batch {i+1}/{len(train_dataloader)} - Time: {batch_duration:.4f}s")
+
             if use_wandb and accelerator.is_main_process:
                 wandb.log({
                     "train/batch_loss": loss.item(),
                     "train/lr": lr_scheduler.get_last_lr()[0],
-                    "train/step": epoch * len(train_dataloader) + i
+                    "train/step": epoch * len(train_dataloader) + i,
+                    "train/batch_time": batch_duration
                 })
 
         avg_train_loss = total_loss / len(train_dataloader)
