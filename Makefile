@@ -14,3 +14,6 @@ LAUNCHER ?= accelerate launch
 
 train:
 	$(LAUNCHER) --config_file $(ACCELERATE_CONFIG) src/esm2_classification.py --config_file configs/train.yaml
+
+train_dbg:
+	$(LAUNCHER) --config_file $(ACCELERATE_CONFIG) src/esm2_classification.py --config_file configs/train_dbg.yaml
