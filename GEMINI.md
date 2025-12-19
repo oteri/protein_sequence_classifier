@@ -113,6 +113,18 @@ Each `.fasta` file contains sequences for a single class, and the filename (with
 -   **Minimalism:** Each test case should be minimal, focusing on a single feature or bug, and have minimal dependencies.
 -   **Performance:** Design test cases to be as fast as possible. Employ mocking extensively to isolate units under test and speed up execution.
 
+## 8. Debugging
+
+For debugging purposes, use the `configs/train_dbg.yaml` configuration file. This file is configured for a quick run with:
+-   `num_epochs`: 1
+-   `use_wandb`: false
+
+To run training with the debug configuration, execute:
+
+```bash
+accelerate launch --config_file configs/accelerate.yaml src/esm2_classification.py --config_file configs/train_dbg.yaml
+```
+
 ## 8. Optimization Strategies
 
 To ensure efficient training (faster speed, lower memory), prioritize these techniques:
