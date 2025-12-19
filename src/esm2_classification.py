@@ -58,7 +58,7 @@ def load_data_from_folder(folder_path):
     labels = []
     # Get all fasta files (support .fasta and .faa)
     folder = Path(folder_path)
-    fasta_files = list(folder.glob("*.fasta")) + list(folder.glob("*.faa"))
+    fasta_files = sorted(list(folder.glob("*.fasta"))) + sorted(list(folder.glob("*.faa")))
 
     if not fasta_files:
         raise ValueError(f"No fasta/faa files found in {folder_path}")

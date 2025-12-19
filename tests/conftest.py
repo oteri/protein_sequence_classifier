@@ -17,6 +17,28 @@ def experiment_results(fixtures_dir):
         return json.load(f)
 
 @pytest.fixture
+def train_config():
+    return {
+        "model_name": "facebook/esm2_t6_8M_UR50D",
+        "lora_r": 8,
+        "lora_alpha": 16,
+        "lora_dropout": 0.1,
+        "batch_size": 4, # Overridden for test speed/consistency in my prev experiments
+        "max_length": 128,
+        "learning_rate": 0.0005,
+        "num_epochs": 1,
+        "output_dir": "./output",
+        "seed": 42,
+        "label_smoothing": 0.1,
+        "loss_type": "focal",
+        "focal_loss_gamma": 2.0,
+        "use_wandb": False,
+        "wandb_entity": "francesco-oteri-perso-sorbonne-universit-",
+        "wandb_project": "protein-sequence-classifier",
+        "wandb_run_name": "esm2-lora-run"
+    }
+
+@pytest.fixture
 def dummy_data_reference(fixtures_dir):
     path = fixtures_dir / "dummy_data_reference.json"
     if path.exists():
