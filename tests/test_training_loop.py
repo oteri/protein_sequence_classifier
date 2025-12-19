@@ -74,10 +74,11 @@ def test_training_loop_cross_entropy(real_components):
     config = {
         "loss_type": "cross_entropy",
         "use_wandb": False,
+        "num_epochs": 1
     }
     
     # Run for 1 epoch
-    history = train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler, accelerator, num_epochs=1, config=config)
+    history = train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler, accelerator, config=config)
     
     assert len(history) == 1
     assert "train_loss" in history[0]
@@ -91,11 +92,12 @@ def test_training_loop_focal_loss(real_components):
     config = {
         "loss_type": "focal",
         "focal_loss_gamma": 2.0,
-        "use_wandb": False
+        "use_wandb": False,
+        "num_epochs": 1
     }
     
     # Run for 1 epoch
-    history = train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler, accelerator, num_epochs=1, config=config)
+    history = train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler, accelerator, config=config)
     
     assert len(history) == 1
     assert "train_loss" in history[0]
@@ -107,11 +109,12 @@ def test_training_loop_invalid_loss(real_components):
     
     config = {
         "loss_type": "invalid_loss_name",
-        "use_wandb": False
+        "use_wandb": False,
+        "num_epochs": 1
     }
     
     with patch("esm2_classification.logger") as mock_logger:
-        history = train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler, accelerator, num_epochs=1, config=config)
+        history = train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler, accelerator, config=config)
         
         assert len(history) == 1
         # Should fallback to CE

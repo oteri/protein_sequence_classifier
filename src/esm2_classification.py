@@ -127,7 +127,7 @@ def evaluate(model, dataloader, accelerator):
     precision, recall, f1, _ = precision_recall_fscore_support(all_labels, all_preds, average='weighted', zero_division=0)
     return avg_loss, accuracy, precision, recall, f1
 
-def train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler, accelerator, num_epochs, config=None):
+def train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler, accelerator, config=None):
     logger.info("Starting training...")
     use_wandb = config.get("use_wandb", False) if config else False
     
@@ -142,7 +142,7 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler
         logger.info("Using default CrossEntropy Loss")
 
     history = []
-
+    num_epochs = config["num_epochs"]
     for epoch in range(num_epochs):
         model.train()
         total_loss = 0
