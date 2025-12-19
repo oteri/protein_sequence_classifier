@@ -14,6 +14,9 @@ from Bio import SeqIO
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 import numpy as np
 
+import torch.nn as nn
+import torch.nn.functional as F
+
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
@@ -21,6 +24,28 @@ logging.basicConfig(
     force=True,
 )
 logger = logging.getLogger(__name__)
+
+class FocalLoss(nn.Module):
+    def __init__(self, alpha=None, gamma=2.0, reduction='mean'):
+        super(FocalLoss, self).__init__()
+        self.gamma = gamma
+        self.alpha = alpha
+        self.reduction = reduction
+
+    def forward(self, inputs, targets):
+        if self.alpha is not None:
+             self.alpha = self.alpha.to(inputs.device)
+             
+        ce_loss = F.cross_entropy(inputs, targets, reduction='none', weight=self.alpha)
+        pt = torch.exp(-ce_loss)
+        focal_loss = ((1 - pt) ** self.gamma) * ce_loss
+
+        if self.reduction == 'mean':
+            return focal_loss.mean()
+        elif self.reduction == 'sum':
+            return focal_loss.sum()
+        else:
+            return focal_loss
 
 def load_config(config_path="configs/train.yaml"):
     with open(config_path, "r") as f:
@@ -104,6 +129,16 @@ def evaluate(model, dataloader, accelerator):
 def train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler, accelerator, num_epochs, config=None):
     logger.info("Starting training...")
     use_wandb = config.get("use_wandb", False) if config else False
+    
+    loss_type = config.get("loss_type", "cross_entropy")
+    focal_gamma = config.get("focal_loss_gamma", 2.0)
+    
+    loss_fct = None
+    if loss_type == "focal":
+        logger.info(f"Using Focal Loss with gamma={focal_gamma}")
+        loss_fct = FocalLoss(gamma=focal_gamma)
+    else:
+        logger.info("Using default CrossEntropy Loss")
 
     for epoch in range(num_epochs):
         model.train()
@@ -112,7 +147,11 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler
             batch_start_time = time.time()
             outputs = model(**batch)
 
-            loss = outputs.loss
+            if loss_type == "focal":
+                loss = loss_fct(outputs.logits, batch["labels"])
+            else:
+                loss = outputs.loss
+
             if loss is None:
                  raise ValueError(f"Model return None loss. Batch keys: {list(batch.keys())}")
 
