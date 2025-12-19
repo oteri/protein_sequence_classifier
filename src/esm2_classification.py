@@ -141,9 +141,12 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler
     else:
         logger.info("Using default CrossEntropy Loss")
 
+    history = []
+
     for epoch in range(num_epochs):
         model.train()
         total_loss = 0
+        batch_losses = []
         progress_bar = tqdm(enumerate(train_dataloader), total=len(train_dataloader), disable=not accelerator.is_local_main_process)
         progress_bar.set_description(f"Epoch {epoch+1}/{num_epochs}")
 
@@ -163,14 +166,17 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler
             optimizer.step()
             lr_scheduler.step()
             optimizer.zero_grad()
-            total_loss += loss.item()
+            
+            loss_val = loss.item()
+            total_loss += loss_val
+            batch_losses.append(loss_val)
 
             batch_duration = time.time() - batch_start_time
-            progress_bar.set_postfix(loss=loss.item())
+            progress_bar.set_postfix(loss=loss_val)
 
             if use_wandb and accelerator.is_main_process:
                 wandb.log({
-                    "train/batch_loss": loss.item(),
+                    "train/batch_loss": loss_val,
                     "train/lr": lr_scheduler.get_last_lr()[0],
                     "train/step": epoch * len(train_dataloader) + i,
                     "train/batch_time": batch_duration
@@ -183,19 +189,34 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler
             wandb.log({"train/epoch_loss": avg_train_loss, "epoch": epoch + 1})
 
         # Validation
+        val_metrics = {}
         if val_dataloader:
             val_loss, val_acc, val_precision, val_recall, val_f1 = evaluate(model, val_dataloader, accelerator)
             logger.info(f"Epoch {epoch+1}/{num_epochs} - Val Loss: {val_loss:.4f} - Val Accuracy: {val_acc:.4f}")
             
+            val_metrics = {
+                "val_loss": val_loss,
+                "val_accuracy": val_acc,
+                "val_precision": val_precision,
+                "val_recall": val_recall,
+                "val_f1": val_f1
+            }
+
             if use_wandb and accelerator.is_main_process:
-                wandb.log({
-                    "val/loss": val_loss,
-                    "val/accuracy": val_acc,
-                    "val/precision": val_precision,
-                    "val/recall": val_recall,
-                    "val/f1": val_f1,
-                    "epoch": epoch + 1
-                })
+                wandb_log_data = {f"val/{k}": v for k, v in val_metrics.items()} # map keys
+                wandb_log_data["epoch"] = epoch + 1
+                wandb.log(wandb_log_data)
+        
+        # Record history
+        epoch_record = {
+            "epoch": epoch + 1,
+            "train_loss": avg_train_loss,
+            "batch_losses": batch_losses,
+            **val_metrics
+        }
+        history.append(epoch_record)
+
+    return history
 
 def main():
     parser = argparse.ArgumentParser()
