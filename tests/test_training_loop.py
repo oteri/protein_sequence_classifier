@@ -13,7 +13,9 @@ def test_training_loop_cross_entropy(real_components, experiment_results):
     config = {
         "loss_type": "cross_entropy",
         "use_wandb": False,
-        "num_epochs": 1
+        "num_epochs": 1,
+        "seed": 42,
+        "deterministic": True
     }
     
     # Run for 1 epoch
@@ -32,7 +34,9 @@ def test_training_loop_focal_loss(real_components, experiment_results):
         "loss_type": "focal",
         "focal_loss_gamma": 2.0,
         "use_wandb": False,
-        "num_epochs": 1
+        "num_epochs": 1,
+        "seed": 42,
+        "deterministic": True
     }
     
     # Run for 1 epoch
@@ -50,7 +54,9 @@ def test_training_loop_invalid_loss(real_components, experiment_results):
     config = {
         "loss_type": "invalid_loss_name",
         "use_wandb": False,
-        "num_epochs": 1
+        "num_epochs": 1,
+        "seed": 42,
+        "deterministic": True
     }
     
     with patch("esm2_classification.logger") as mock_logger:
@@ -62,4 +68,3 @@ def test_training_loop_invalid_loss(real_components, experiment_results):
         
         assert history[0]["train_loss"] == pytest.approx(expected["train_loss"], rel=0.01)
         mock_logger.info.assert_any_call("Using default CrossEntropy Loss")
-
