@@ -112,6 +112,8 @@ Each `.fasta` file contains sequences for a single class, and the filename (with
 -   **Fixtures:** Use `pytest` fixtures for common test resources to ensure consistency and reduce setup duplication.
 -   **Minimalism:** Each test case should be minimal, focusing on a single feature or bug, and have minimal dependencies.
 -   **Performance:** Design test cases to be as fast as possible. Employ mocking extensively to isolate units under test and speed up execution.
+-   **Execution:** Use `uv run pytest` to run tests, ensuring that all dependencies defined in `pyproject.toml` are correctly available in the environment.
+-   **Fidelity:** Do not take shortcuts or simplifications in tests unless explicitly requested. Tests should mirror production processes as closely as possible (e.g., using full dummy datasets).
 
 ## 8. Debugging
 
