@@ -114,6 +114,7 @@ Each `.fasta` file contains sequences for a single class, and the filename (with
 -   **Performance:** Design test cases to be as fast as possible. Employ mocking extensively to isolate units under test and speed up execution.
 -   **Execution:** Use `uv run pytest` to run tests, ensuring that all dependencies defined in `pyproject.toml` are correctly available in the environment.
 -   **Fidelity:** Do not take shortcuts or simplifications in tests unless explicitly requested. Tests should mirror production processes as closely as possible (e.g., using full dummy datasets).
+-   **Verification:** The results of each test must be compared to the ground truth stored in the tests directory (e.g., `tests/fixtures/experiment_results.json` and `tests/fixtures/train_data_reference.json`).
 
 ## 8. Debugging
 
