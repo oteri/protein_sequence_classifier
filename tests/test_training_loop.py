@@ -87,8 +87,8 @@ def test_training_loop_cross_entropy(real_components, experiment_results):
     assert len(history) == 1
     expected = experiment_results["cross_entropy"][0]
     
-    assert history[0]["train_loss"] == pytest.approx(expected["train_loss"], rel=0.1)
-    assert history[0]["val_loss"] == pytest.approx(expected["val_loss"], rel=0.1)
+    assert history[0]["train_loss"] == pytest.approx(expected["train_loss"], rel=0.01)
+    assert history[0]["val_loss"] == pytest.approx(expected["val_loss"], rel=0.01)
 
 def test_training_loop_focal_loss(real_components, experiment_results):
     model, train_dataloader, val_dataloader, optimizer, lr_scheduler, accelerator = real_components
@@ -106,8 +106,8 @@ def test_training_loop_focal_loss(real_components, experiment_results):
     assert len(history) == 1
     expected = experiment_results["focal"][0]
     
-    assert history[0]["train_loss"] == pytest.approx(expected["train_loss"], rel=0.1)
-    assert history[0]["val_loss"] == pytest.approx(expected["val_loss"], rel=0.1)
+    assert history[0]["train_loss"] == pytest.approx(expected["train_loss"], rel=0.01)
+    assert history[0]["val_loss"] == pytest.approx(expected["val_loss"], rel=0.01)
 
 def test_training_loop_invalid_loss(real_components, experiment_results):
     model, train_dataloader, val_dataloader, optimizer, lr_scheduler, accelerator = real_components
@@ -125,6 +125,6 @@ def test_training_loop_invalid_loss(real_components, experiment_results):
         # Should fallback to CE, so compare with CE results
         expected = experiment_results["cross_entropy"][0]
         
-        assert history[0]["train_loss"] == pytest.approx(expected["train_loss"], rel=0.1)
+        assert history[0]["train_loss"] == pytest.approx(expected["train_loss"], rel=0.01)
         mock_logger.info.assert_any_call("Using default CrossEntropy Loss")
 

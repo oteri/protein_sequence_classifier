@@ -22,13 +22,14 @@ def train_config():
         "model_name": "facebook/esm2_t6_8M_UR50D",
         "lora_r": 8,
         "lora_alpha": 16,
-        "lora_dropout": 0.1,
-        "batch_size": 4, # Overridden for test speed/consistency in my prev experiments
+        "lora_dropout": 0.0, # Disable dropout for reproducibility
+        "batch_size": 4, 
         "max_length": 128,
         "learning_rate": 0.0005,
         "num_epochs": 1,
         "output_dir": "./output",
         "seed": 42,
+        "deterministic": True, # Enable deterministic mode
         "label_smoothing": 0.1,
         "loss_type": "focal",
         "focal_loss_gamma": 2.0,

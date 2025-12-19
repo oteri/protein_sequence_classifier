@@ -14,6 +14,8 @@ from datasets import Dataset
 from Bio import SeqIO
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 import numpy as np
+import os
+import random
 
 import torch.nn as nn
 import torch.nn.functional as F
@@ -25,6 +27,18 @@ logging.basicConfig(
     force=True,
 )
 logger = logging.getLogger(__name__)
+
+def seed_everything(seed: int, deterministic: bool = False):
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    
+    if deterministic:
+        torch.use_deterministic_algorithms(True, warn_only=True)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
 
 class FocalLoss(nn.Module):
     def __init__(self, alpha=None, gamma=2.0, reduction='mean'):
@@ -127,7 +141,10 @@ def evaluate(model, dataloader, accelerator):
     precision, recall, f1, _ = precision_recall_fscore_support(all_labels, all_preds, average='weighted', zero_division=0)
     return avg_loss, accuracy, precision, recall, f1
 
-def train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler, accelerator, config=None):
+def train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler, accelerator, config):
+
+    seed_everything(config.get("seed", 42), config.get("deterministic", False))
+        
     logger.info("Starting training...")
     use_wandb = config.get("use_wandb", False) if config else False
     
