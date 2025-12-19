@@ -121,6 +121,57 @@ def create_dataset(folder_path, label_to_id=None):
     dataset = Dataset.from_dict({"sequence": filtered_sequences, "labels": labels_id})
     return dataset, label_to_id
 
+def print_dataset_statistics(train_ds, val_ds, test_ds, id_to_label):
+    from collections import Counter
+    
+    splits = ["Train", "Validation", "Test"]
+    datasets = [train_ds, val_ds, test_ds]
+    
+    stats = {split: Counter(ds["labels"]) for split, ds in zip(splits, datasets)}
+    label_ids = sorted(id_to_label.keys())
+    
+    headers = ["Label", "Train", "Validation", "Test", "Total"]
+    table_rows = []
+    
+    col_totals = {split: 0 for split in splits}
+    grand_total = 0
+    
+    for label_id in label_ids:
+        label_name = id_to_label[label_id]
+        row = [label_name]
+        row_total = 0
+        for split in splits:
+            count = stats[split].get(label_id, 0)
+            row.append(count)
+            row_total += count
+            col_totals[split] += count
+        row.append(row_total)
+        grand_total += row_total
+        table_rows.append(row)
+        
+    totals_row = ["TOTAL"]
+    for split in splits:
+        totals_row.append(col_totals[split])
+    totals_row.append(grand_total)
+    table_rows.append(totals_row)
+    
+    # Calculate column widths
+    all_data = [headers] + table_rows
+    col_widths = [max(len(str(item)) for item in col) for col in zip(*all_data)]
+    col_widths = [w + 2 for w in col_widths]
+
+    # Build table string
+    lines = ["\nDataset Statistics:"]
+    header_str = "".join(h.ljust(w) for h, w in zip(headers, col_widths))
+    lines.append(header_str)
+    lines.append("-" * len(header_str))
+    
+    for row in table_rows:
+        row_str = "".join(str(val).ljust(w) for val, w in zip(row, col_widths))
+        lines.append(row_str)
+    
+    logger.info("\n".join(lines))
+
 def evaluate(model, dataloader, accelerator):
     model.eval()
     total_loss = 0
@@ -274,6 +325,9 @@ def main():
         test_dataset, _ = create_dataset(test_path, label_to_id)
     except ValueError:
          raise ValueError(f"Test data is empty! Please populate {test_path}.")
+
+    if accelerator.is_main_process:
+        print_dataset_statistics(train_dataset, val_dataset, test_dataset, id_to_label)
 
     # 4. Tokenization
     model_name = config["model_name"]
