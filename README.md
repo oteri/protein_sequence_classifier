@@ -7,10 +7,10 @@ The framework is built for both **human developers** and **coding agents**, with
 
 All **ESM2 variants available on Hugging Face** are supported through configuration:
 
-* `esm2_t6_8M`
-* `esm2_t12_35M`
-* `esm2_t30_150M`
-* `esm2_t33_650M`
+* `esm2_t6_8M_UR50D`
+* `esm2_t12_35M_UR50D`
+* `esm2_t30_150M_UR50D`
+* `esm2_t33_650M_UR50D`
 * (or any other HF-hosted ESM2 variant)
 
 Label assignment is automatic and derived from filenames.
