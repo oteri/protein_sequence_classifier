@@ -1,4 +1,4 @@
-model_name: "facebook/esm2_t6_8M_UR50D"
+model_name: "facebook/esm2_t6_8M_UR50D" # ESM2 model variant:  `esm2_t6_8M_UR50D`, `esm2_t12_35M_UR50D`, `esm2_t30_150M_UR50D`, `esm2_t33_650M_UR50D`
 lora_r: 8
 lora_alpha: 16
 lora_dropout: 0.1
@@ -9,6 +9,8 @@ num_epochs: 3
 output_dir: "./output"
 seed: 42
 label_smoothing: 0.1
+loss_type: "focal" # Options: "cross_entropy", "focal"
+focal_loss_gamma: 2.0
 use_wandb: true
 wandb_entity: "francesco-oteri-perso-sorbonne-universit-"
 wandb_project: "protein-sequence-classifier"
