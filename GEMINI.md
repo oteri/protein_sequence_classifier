@@ -112,3 +112,14 @@ Each `.fasta` file contains sequences for a single class, and the filename (with
 -   **Fixtures:** Use `pytest` fixtures for common test resources to ensure consistency and reduce setup duplication.
 -   **Minimalism:** Each test case should be minimal, focusing on a single feature or bug, and have minimal dependencies.
 -   **Performance:** Design test cases to be as fast as possible. Employ mocking extensively to isolate units under test and speed up execution.
+
+## 8. Optimization Strategies
+
+To ensure efficient training (faster speed, lower memory), prioritize these techniques:
+
+-   **Mixed Precision:** Use `fp16` or `bf16` via `accelerate`.
+-   **Gradient Checkpointing:** Enable `model.gradient_checkpointing_enable()` for significant memory savings.
+-   **Gradient Accumulation:** Use `accelerator.accumulate(model)` to simulate larger batch sizes on limited hardware.
+-   **LoRA Tuning:** Adjust `r` and `alpha` to balance performance and memory footprint.
+-   **Flash Attention:** Leverage modern attention kernels if hardware supports it.
+-   **Batching:** Use length-based batching or truncation for very long sequences to prevent OOM.

@@ -155,6 +155,52 @@ with configs automatically loaded.
 
 ---
 
+## Optimization Tips
+
+### Speed Optimization
+
+*   **Mixed Precision (fp16/bf16):**
+    *   **Why:** Significantly speeds up training on modern GPUs (Volta/Ampere/Hopper) by using lower precision arithmetic.
+    *   **How:** Enable it in your `accelerate` config:
+        ```bash
+        accelerate config
+        # Select 'fp16' or 'bf16'
+        ```
+        Or edit `configs/accelerate.yaml` directly.
+
+*   **Flash Attention:**
+    *   **Why:** Faster attention mechanism with lower memory footprint.
+    *   **How:** Ensure you are using PyTorch 2.0+ and a compatible GPU. It is often enabled automatically for SDPA (Scaled Dot Product Attention).
+
+### Memory Optimization
+
+*   **Reduce Batch Size:**
+    *   **Why:** Easiest way to avoid OOM (Out Of Memory) errors.
+    *   **How:** Lower `batch_size` in `configs/train.yaml`.
+
+*   **LoRA Parameters:**
+    *   **Why:** Smaller adapters use less memory.
+    *   **How:** Reduce `lora_r` (e.g., 16 → 8) in `configs/train.yaml`.
+
+*   **Gradient Checkpointing:**
+    *   **Why:** Drastically reduces memory usage by recomputing activations during the backward pass instead of storing them.
+    *   **How:** Requires a small code change in `src/esm2_classification.py`. Add this before the training loop:
+        ```python
+        model.gradient_checkpointing_enable()
+        ```
+
+*   **Gradient Accumulation:**
+    *   **Why:** Simulate a large batch size using small mini-batches to save memory.
+    *   **How:** Requires wrapping the training step in `src/esm2_classification.py`:
+        ```python
+        with accelerator.accumulate(model):
+            outputs = model(**batch)
+            ...
+            optimizer.step()
+        ```
+
+---
+
 ## Inference (COMING SOON)
 
 Inference support will include:
