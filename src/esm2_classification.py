@@ -289,6 +289,7 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_file", type=str, help="Path to the config file.")
+    parser.add_argument("--dataset_root", type=str, help="Root folder for the datasets.")
     args = parser.parse_args()
 
     # 1. Initialize Accelerator
@@ -297,13 +298,21 @@ def main():
 
     # 2. Load Config
     config = load_config(args.config_file)
+    
+    # Override config with command line argument if provided
+    if args.dataset_root:
+        config["dataset_root"] = args.dataset_root
+    elif "dataset_root" not in config:
+        config["dataset_root"] = "data"
+        
     logger.info(f"Loaded config: {config}")
 
     # 3. Load Data & Create Label Map
-    logger.info("Loading training data...")
-    train_path = "data/train"
-    val_path = "data/validation" if Path("data/validation").exists() else "data/validate"
-    test_path = "data/test"
+    logger.info(f"Loading data from {config['dataset_root']}...")
+    dataset_root = Path(config["dataset_root"])
+    train_path = dataset_root / "train"
+    val_path = dataset_root / "validation" if (dataset_root / "validation").exists() else dataset_root / "validate"
+    test_path = dataset_root / "test"
 
     try:
         train_dataset, label_to_id = create_dataset(train_path)

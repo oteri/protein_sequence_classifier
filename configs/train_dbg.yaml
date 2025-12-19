@@ -15,3 +15,4 @@ wandb_project: "protein-sequence-classifier"
 wandb_run_name: "esm2-lora-run"
 loss_type: "focal" # Options: "cross_entropy", "focal"
 focal_loss_gamma: 2.0
+dataset_root: "tests/data"
