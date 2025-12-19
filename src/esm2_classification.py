@@ -123,7 +123,8 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler
             total_loss += loss.item()
 
             batch_duration = time.time() - batch_start_time
-            logger.info(f"Epoch {epoch+1}/{num_epochs} - Batch {i+1}/{len(train_dataloader)} - Time: {batch_duration:.4f}s")
+            percentage = (i + 1) / len(train_dataloader) * 100
+            logger.info(f"Epoch {epoch+1}/{num_epochs} - Batch {i+1}/{len(train_dataloader)} ({percentage:.2f}%) - Time: {batch_duration:.4f}s")
 
             if use_wandb and accelerator.is_main_process:
                 wandb.log({
