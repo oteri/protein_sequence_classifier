@@ -1,6 +1,7 @@
 from pathlib import Path
 import yaml
 import time
+from tqdm.auto import tqdm
 import torch
 import logging
 import argparse
@@ -143,7 +144,10 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler
     for epoch in range(num_epochs):
         model.train()
         total_loss = 0
-        for i, batch in enumerate(train_dataloader):
+        progress_bar = tqdm(enumerate(train_dataloader), total=len(train_dataloader), disable=not accelerator.is_local_main_process)
+        progress_bar.set_description(f"Epoch {epoch+1}/{num_epochs}")
+
+        for i, batch in progress_bar:
             batch_start_time = time.time()
             outputs = model(**batch)
 
@@ -162,8 +166,7 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler
             total_loss += loss.item()
 
             batch_duration = time.time() - batch_start_time
-            percentage = (i + 1) / len(train_dataloader) * 100
-            logger.info(f"Epoch {epoch+1}/{num_epochs} - Batch {i+1}/{len(train_dataloader)} ({percentage:.2f}%) - Time: {batch_duration:.4f}s")
+            progress_bar.set_postfix(loss=loss.item())
 
             if use_wandb and accelerator.is_main_process:
                 wandb.log({
