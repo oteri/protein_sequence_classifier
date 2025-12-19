@@ -108,11 +108,6 @@ def train_model(model, train_dataloader, val_dataloader, optimizer, lr_scheduler
         model.train()
         total_loss = 0
         for i, batch in enumerate(train_dataloader):
-            if i == 0:
-                 # Debug print
-                if 'labels' not in batch:
-                     logger.warning(f"WARNING: 'labels' key missing in batch! Keys: {list(batch.keys())}")
-
             outputs = model(**batch)
 
             loss = outputs.loss
