@@ -11,7 +11,8 @@ download_all_datasets:
 
 ACCELERATE_CONFIG ?= configs/accelerate.yaml
 LAUNCHER ?= accelerate launch
-
+test:
+	uv run pytest tests/
 train:
 	$(LAUNCHER) --config_file $(ACCELERATE_CONFIG) src/esm2_classification.py --config_file configs/train.yaml
 
